@@ -12,6 +12,25 @@ import openpyxl
 import numpy as np
 import matplotlib.pyplot as plt
 import laser_lib as ll
+from collections import Counter
+
+
+def calculate_median(lst):
+    sorted_lst = sorted(lst)
+    n = len(sorted_lst)
+    mid = n // 2  # Floor division to get the middle index
+
+    if n % 2 == 0:
+        # If the list has an even number of elements, average the two middle values
+        median = (sorted_lst[mid - 1] + sorted_lst[mid]) / 2
+    else:
+        # If the list has an odd number of elements, the median is the middle value
+        median = sorted_lst[mid]
+
+    
+    
+    return [sorted_lst[0], median, sorted_lst[-1]]
+
 
 def calc_bank_errors(bank_row_dict, bank):
 	errors = 0
@@ -32,8 +51,11 @@ lines = ll.parse_run_directory(sys.argv[1], sys.argv[2])
 
 
 
-
-######################## Find the maximum number of errors for each bank################################
+'''
+To find the most two/four impacted banks for vertical/horizontal lines respectively, the method used here for each line is to divide the number of errors 
+for a specific bank by the maximum errors found for that specifc bank by each line. This ratio gives a value ( [0,1)) for each bank impacted by that specific 
+line. Using this number we select the most impacted two/four banks for vertical/horizontal lines respectively. 
+'''
 max_bank_errors = {}
 for line in lines :
 	for bank in line.bank_row_dict:
@@ -43,7 +65,7 @@ for line in lines :
 			max_bank_errors[bank] = calc_bank_errors(line.bank_row_dict, bank)
 
 
-#################### Scale the errors and find the top two banks ###################v
+
 for line in lines:
 	bank_errors_scaled = {}
 	for bank in line.bank_row_dict:
@@ -66,8 +88,21 @@ for line in lines:
 		if len(bank_errors_scaled_sorted)>3:	
 			line.bank_row_dict_max_banks[bank_errors_scaled_sorted[3][0]] = line.bank_row_dict[bank_errors_scaled_sorted[3][0]]		
 
-##################### Calculate XY Correlation data #####################
 
+
+
+
+for line in lines:
+	if(line.coor == "X") or (line.coor == "Y"):
+		print("***********************"+line.coor + " = " +str(line.value)+"*******************************")
+		for bank in line.bank_row_dict_max_banks:
+			print(bank, calc_bank_errors(line.bank_row_dict_max_banks, bank))
+
+
+
+
+
+#### Do X,Y Correlation on this bank data to plot spatially.
 banks = {}
 for line in lines:
 	for bank in line.bank_row_dict_max_banks:
@@ -84,8 +119,63 @@ for bank in banks:
 		for Y in banks[bank][1]:
 			banks2[bank].append([X,Y])
 
+## Plot the banks
+banks_list =  list(banks2.keys())
+marker_colors = ['blue', 'orange', 'green', 'red', 'purple', 'black', 'pink', 'gray']
 
 
+print(banks_list)
+scatter_plot =[]
+for bank in banks2:
+	bank_id = banks_list.index(bank)
+	X =[]
+	Y = []
+	bank_colors = []
+	for point in banks2[bank]:
+		X.append(point[0])
+		Y.append(point[1])
+	bank_color = marker_colors[bank_id]
+
+	print(X)
+	print(Y)
+	print(bank_colors)
+	print(bank_id)
+	
+	scatter_plot.append(plt.scatter(X, Y, color=bank_color, s=30,   label=str(bank), edgecolor = "black", alpha=1)	)	
+plt.title("Spatial Mapping of Banks")
+plt.xlim(0,110)
+plt.ylim(0,80)
+legend1 = plt.legend(scatter_plot, banks2.keys(), loc="upper left")
+plt.gca().add_artist(legend1)  # Add the color-based legend to the plot without removing the scatter plot legend
+
+plt.show()
+plt.close()
+
+
+
+bank_overlap = np.zeros((80, 100))
+for bank in banks2:
+	bank_id = banks_list.index(bank)
+	for coor in banks2[bank]:
+		bank_overlap[coor[1]][coor[0]] +=0.125
+
+
+plt.imshow(bank_overlap, cmap='Greys', interpolation='nearest', alpha=0.125)
+plt.title('Bank Overlap')
+plt.xlabel('X-axis')
+plt.ylabel('Y-axis')
+
+plt.show()
+plt.close()
+
+
+
+######################################################################################################
+################# Calculate Spatial Correlation of Rows and Columns ##################################
+######################################################################################################
+
+
+##################### Calculate XY Correlation data #####################
 
 
 rows = {}
@@ -131,128 +221,8 @@ for key in cols:
 				cols2[key] = []	
 			cols2[key].append([X,Y])
 
-banks_list =  list(banks2.keys())
 
 
-#Separate subplotting for debugging
-# To plot the data differentially 
-## Choose a colormap
-#marker_styles = ['o', 's', '^', 'v', 'D', 'P', '*', 'X']
-#fig, axes = plt.subplots(2, 4, figsize=(20, 6))  # 2 rows, 1 column
-#
-#print(banks_list)
-#for bank in banks2:
-#	bank_id = banks_list.index(bank)
-#	X =[]
-#	Y = []
-#	bank_colors = []
-#	for point in banks2[bank]:
-#		X.append(point[0])
-#		Y.append(point[1])
-#		bank_colors.append(marker_styles[bank_id])
-#
-#	print(X)
-#	print(Y)
-#	print(bank_colors)
-#	print(bank_id)
-#	for i in range(len(X)):
-#		axes[int(bank_id/4), bank_id%4].scatter(X[i], Y[i], marker=bank_colors[i], s=4, facecolor ="none",  label=str(bank), edgecolor = "black", alpha=1)		
-#		axes[int(bank_id/4), bank_id%4].set_title("bank=" + str(bank))
-#		axes[int(bank_id/4), bank_id%4].set_xlim(0,110)
-#		axes[int(bank_id/4), bank_id%4].set_ylim(0,80)
-#
-#		
-#
-#plt.show()
-#plt.close()
-
-## Choose a colormap
-marker_colors = ['blue', 'orange', 'green', 'red', 'purple', 'black', 'pink', 'gray']
-
-
-print(banks_list)
-scatter_plot =[]
-for bank in banks2:
-	bank_id = banks_list.index(bank)
-	X =[]
-	Y = []
-	bank_colors = []
-	for point in banks2[bank]:
-		X.append(point[0])
-		Y.append(point[1])
-	bank_color = marker_colors[bank_id]
-
-	print(X)
-	print(Y)
-	print(bank_colors)
-	print(bank_id)
-	
-	scatter_plot.append(plt.scatter(X, Y, color=bank_color, s=30,   label=str(bank), edgecolor = "black", alpha=1)	)	
-plt.title("Spatial Mapping of Banks")
-plt.xlim(0,110)
-plt.ylim(0,80)
-legend1 = plt.legend(scatter_plot, banks2.keys(), loc="upper left")
-plt.gca().add_artist(legend1)  # Add the color-based legend to the plot without removing the scatter plot legend
-
-
-		
-
-plt.show()
-plt.close()
-
-
-
-## To plot it as a colormap
-#bank_gridmap = []
-#
-#for bank in range(0,8):
-#	bank_gridmap.append(np.zeros((80, 100)))
-#
-#for bank in banks2:
-#	bank_id = banks_list.index(bank)
-#	for coor in banks2[bank]:
-#		bank_gridmap[bank_id][coor[1]][coor[0]] =1
-#	
-## Plotting
-#fig, ax = plt.subplots(figsize=(8, 10))
-#
-#im =[ ]
-#colormaps = ['Purples', 'Blues', 'Greens', 'Reds', 'Oranges', 'YlOrBr', 'Greys', 'binary']
-#
-#for bank in range(0,8):
-#	# Plot the first dimension with 'viridis' colormap
-#	im.append(ax.imshow(bank_gridmap[bank], cmap=colormaps[bank], interpolation='nearest', alpha=1))
-#
-##cbar = []
-##for bank in range(0,8):
-##	cbar.append(fig.colorbar(im[bank], ax=ax, label=str(banks_list[bank])))
-### Set color legends
-##for bank in range(0,8):
-##	cbar[bank].set_ticks([0, 0.5, 1])
-##	cbar[bank].set_ticklabels(['NP', '', 'P'])
-#
-## Add titles and labels
-#plt.title('Bank Colormap')
-#plt.xlabel('X-axis')
-#plt.ylabel('Y-axis')
-#
-#plt.show()
-#plt.close()
-
-bank_overlap = np.zeros((80, 100))
-for bank in banks2:
-	bank_id = banks_list.index(bank)
-	for coor in banks2[bank]:
-		bank_overlap[coor[1]][coor[0]] +=0.125
-
-
-plt.imshow(bank_overlap, cmap='Greys', interpolation='nearest', alpha=0.125)
-plt.title('Bank Overlap')
-plt.xlabel('X-axis')
-plt.ylabel('Y-axis')
-
-plt.show()
-plt.close()
 
 
 #######################################################################################################################################################################################
@@ -274,7 +244,7 @@ bit_correlation_y = {}
 bit_correlation_y_data =[]
 #Correlation between lines:
 #X_correlations:	
-
+print("=====================================X_Cols_data========================================")
 for line1 in lines:
 	for line2 in lines:
 		if line1.coor == "X" and line2.coor == "X":
@@ -291,6 +261,11 @@ for line1 in lines:
 					if bank in line2.bank_row_dict_max_banks:
 						for row in line1.bank_row_dict_max_banks[bank]:
 							if row in line2.bank_row_dict_max_banks[bank]:
+								print(line1.value,bank, row)
+								print(line1.bank_row_dict_max_banks[bank][row].keys())
+								print(line2.value,bank, row)
+								print(line2.bank_row_dict_max_banks[bank][row].keys())
+
 								row_correlation_x[diff] += 1
 								row_correlation_x_data.append([bank,row,line1.value, line2.value])
 								for col in line1.bank_row_dict_max_banks[bank][row]:
@@ -303,7 +278,7 @@ for line1 in lines:
 												bit_correlation_x_data.append([bank,row,col,bit,line1.value, line2.value])
 
 #Y_correlations:	
-
+print("=====================================Y_Cols_data=====================================")
 for line1 in lines:
 	for line2 in lines:
 		if line1.coor == "Y" and line2.coor == "Y":
@@ -320,6 +295,10 @@ for line1 in lines:
 					if bank in line2.bank_row_dict_max_banks:
 						for row in line1.bank_row_dict_max_banks[bank]:
 							if row in line2.bank_row_dict_max_banks[bank]:
+								print(line1.value,bank, row)
+								print(line1.bank_row_dict_max_banks[bank][row].keys())
+								print(line2.value,bank, row)
+								print(line2.bank_row_dict_max_banks[bank][row].keys())
 								row_correlation_y[diff] += 1
 								row_correlation_y_data.append([bank,row,line1.value, line2.value])
 								for col in line1.bank_row_dict_max_banks[bank][row]:
@@ -330,6 +309,10 @@ for line1 in lines:
 											if bit in line2.bank_row_dict_max_banks[bank][row][col]:
 												bit_correlation_y[diff] += 1
 												bit_correlation_y_data.append([bank,row,col,bit,line1.value, line2.value])
+
+
+
+
 
 
 
@@ -444,68 +427,200 @@ plt.show()
 
 
 
+######################################################################################################################################
+#########################  Intended for finer mapping plotting the spread of rows bank wise ##########################################
+######################################################################################################################################
+'''
+X_spread= [] 
+Y_spread= []
+X_min = []
+X_max = []
+Y_min = []
+Y_max = []
+xt = 2
+
+for line in lines:
+	bank_coff =0
+	for bank in line.bank_row_dict_max_banks:
+		rows = sorted(list(line.bank_row_dict_max_banks[bank].keys()));
+		rows_based = []
+		for row in rows:
+			rows_based.append(row - rows[0]);
 
 
-#print("row_correlation_x_data")
-#print(row_correlation_x_data)
-#print("row_correlation_y_data")
-#print(row_correlation_y_data)
-#print("col_correlation_x_data")
-#print(col_correlation_x_data)
-#print("col_correlation_y_data")
-#print(col_correlation_y_data)
-#print("bit_correlation_x_data")
-#print(bit_correlation_x_data)
-#print("bit_correlation_y_data")
-#print(bit_correlation_y_data)
+        
+		if(line.coor=="X"):
+			plt.scatter([line.value*10 + bank_coff]*len(rows_based), rows_based, s=2)
+		bank_coff +=5
+		
 
 
-#######################################################################################################################################################################################
-######################                                                      XY Correlation for Rows and Columns								###############
-#######################################################################################################################################################################################
-
-print("XY_Row_Correlation")
-for key in rows2:
-	if len(rows2[key])>1:
-		print(key,rows2[key])
+plt.title("Spread of rows in lines drawn parallel to Y Axis.")
+plt.show()
+	
+plt.close()
 
 
-print("XY_Row_Correlation spread")
-rows2_spread = {}
-rows2_spread_max = [-300, -300]
-
-for key in rows2:
-	if len(rows2[key])>1:
-		X_MAX = -300
-		X_MIN = 300
-		Y_MAX = -300
-		Y_MIN = 300
-		for coors in rows2[key]:
-			if coors[0] > X_MAX:
-				X_MAX = coors[0]
-			if coors[0] < X_MIN:
-				X_MIN  = coors[0]
-			if coors[1] > Y_MAX:
-				Y_MAX = coors[1]
-			if coors[1] < Y_MIN:
-				Y_MIN  = coors[1]
-		rows2_spread[key] = [X_MAX - X_MIN, Y_MAX - Y_MIN ] 
-print("Spread of different rows")			
-for key in rows2_spread:
-	print(key, rows2_spread[key])
-	if rows2_spread[key][0] > rows2_spread_max[0]:
-		rows2_spread_max[0] = rows2_spread[key][0]
-	if rows2_spread[key][1] > rows2_spread_max[1]:
-		rows2_spread_max[1] = rows2_spread[key][1]
-
-print("Maximum spread of a row")
-print(rows2_spread_max)
+X_spread= [] 
+Y_spread= []
+X_min = []
+X_max = []
+Y_min = []
+Y_max = []
+xt = 2
+for line in lines:
+	bank_coff =0
+	for bank in line.bank_row_dict_max_banks:
+		rows = sorted(list(line.bank_row_dict_max_banks[bank].keys()));
+		rows_based = []
+		for row in rows:
+			rows_based.append(row - rows[0]);
 
 
-print("XY_Column_Correlation")
-for key in cols2:
-	if len(cols2[key])>1:
-		print(key,cols2[key])
+        
+		if(line.coor=="Y"):
+			plt.scatter([line.value*20 + bank_coff]*len(rows_based), rows_based, s=2)
+		bank_coff+= 3
+
+
+plt.title("Spread of rows in lines drawn parallel to X Axis")
+plt.show()
+		
+
+plt.close()
+'''
+##################### Plot bank based spread of rows in X and Y direction ##############
+
+X_spread= [] 
+Y_spread= []
+X_min = []
+X_max = []
+Y_min = []
+Y_max = []
+xt = 2
+fig, axes = plt.subplots(2, 4, figsize=(20, 6))  # 2 rows, 1 column
+for bank1 in banks_list:
+	for line in lines:
+		if line.coor == "X":
+			bank_coff =0
+			for bank in line.bank_row_dict_max_banks:
+				if bank1 == bank:
+					bank_id = banks_list.index(bank) 
+					rows = sorted(list(line.bank_row_dict_max_banks[bank].keys()));
+					row_based =[]
+					for row in rows:
+						row_based.append(row - rows[0]);
+					
+					axes[int(bank_id/4), bank_id%4].scatter([line.value]*len(row_based), row_based, s=2)
+	
+#		axes[int(bank_id/4), bank_id%4].scatter(X[i], Y[i], marker=bank_colors[i], s=4, facecolor ="none",  label=str(bank), edgecolor = "black", alpha=1)	
+
+
+for bank in banks_list:	
+	bank_id = banks_list.index(bank) 
+	axes[int(bank_id/4), bank_id%4].set_title("bank=" + str(bank))
+	#axes[int(bank_id/4), bank_id%4].set_xlim(0,110)
+	axes[int(bank_id/4), bank_id%4].set_ylim(0,65536)
+
+	
+plt.show()
+plt.close()
+					
+	
+
+X_spread= [] 
+Y_spread= []
+X_min = []
+X_max = []
+Y_min = []
+Y_max = []
+xt = 2
+fig, axes = plt.subplots(2, 4, figsize=(20, 6))  # 2 rows, 1 column
+for bank1 in banks_list:
+	for line in lines:
+		if(line.coor =="Y"):
+			bank_coff =0
+			for bank in line.bank_row_dict_max_banks:
+				if bank1 == bank:
+					bank_id = banks_list.index(bank) 
+					rows = sorted(list(line.bank_row_dict_max_banks[bank].keys()));
+					row_based =[]
+					for row in rows:
+						row_based.append(row - rows[0]);
+					axes[int(bank_id/4), bank_id%4].scatter([line.value]*len(row_based), row_based, s=2)
+
+#		axes[int(bank_id/4), bank_id%4].scatter(X[i], Y[i], marker=bank_colors[i], s=4, facecolor ="none",  label=str(bank), edgecolor = "black", alpha=1)	
+
+
+for bank in banks_list:	
+	bank_id = banks_list.index(bank) 
+	axes[int(bank_id/4), bank_id%4].set_title("bank=" + str(bank))
+	#axes[int(bank_id/4), bank_id%4].set_xlim(0,110)
+	axes[int(bank_id/4), bank_id%4].set_ylim(0,65536)
+
+	
+plt.show()
+plt.close()       
+	
+
+
+
+
+
+########################################################################################################################################################################################
+############################################# Plot the DR/DE, Jumps in the row numbers for each line and each bank when rows are arranged in ascending order############################
+########################################################################################################################################################################################
+print("Counter Prints")
+labels = []
+for bank1 in banks_list:
+	bank_lst_x = {}
+	for line in lines:
+		if(line.coor == "X"):
+			for bank in line.bank_row_dict_max_banks:
+				if bank1 == bank:
+					rows = list(line.bank_row_dict_max_banks[bank].keys())
+					rows_sorted = sorted(rows)
+					diff = []
+					for i in range(len(rows_sorted)-1):
+						diff.append(rows_sorted[i+1] - rows_sorted[i])
+					labels.append("Bank="+str(bank1)+"  X="+str(line.value))
+					print(Counter(diff))
+					bank_lst_x[line.value] = [rows_sorted[:-1], diff]
+
+	bank_lst_y = {}
+	for line in lines:
+		if(line.coor == "Y"):
+			for bank in line.bank_row_dict_max_banks:
+				if bank1 == bank:
+					rows = list(line.bank_row_dict_max_banks[bank].keys())
+					rows_sorted = sorted(rows)
+					diff = []
+					for i in range(len(rows_sorted)-1):
+						diff.append(rows_sorted[i+1] - rows_sorted[i])
+					labels.append("Bank="+str(bank1)+ "  Y="+str(line.value))
+					print(Counter(diff))
+					bank_lst_y[line.value] = [rows_sorted[:-1], diff]
+	fig, axes = plt.subplots(2, max(len(bank_lst_y), len(bank_lst_x)), figsize=(30, 6))  # 2 rows, 1 column	
+	it = 0
+	sorted_keys = sorted(bank_lst_x.keys())
+	#print(sorted_keys)
+	for value in sorted_keys:			
+		axes[0, it].plot(bank_lst_x[value][0], bank_lst_x[value][1], marker="o")	
+		axes[0, it].set_title("X="+str(value))
+		it = it+1
+	it = 0
+	sorted_keys = sorted(bank_lst_y.keys())
+	#print(sorted_keys)
+	for value in sorted_keys:			
+		axes[1, it].plot(bank_lst_y[value][0], bank_lst_y[value][1], marker="o")
+		axes[1, it].set_title("Y="+str(value))
+		it = it+1
+	fig.suptitle("Bank=" + str(bank1))
+	plt.show()
+	plt.close()
+
+
+print(labels)
 
 
 
