@@ -13,6 +13,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import laser_lib as ll
 from collections import Counter
+import matplotlib.pyplot as plt
+from matplotlib.text import TextPath
+from matplotlib.patches import PathPatch
+from matplotlib.transforms import Affine2D
+
+
+def create_number_marker(number, size=1.0):
+    text_path = TextPath((0, 0), str(number), size=size)
+    trans = Affine2D().translate(-text_path.vertices[:, 0].mean(), -text_path.vertices[:, 1].mean())
+    text_path = trans.transform_path(text_path)
+    return text_path
+
 
 
 def calculate_median(lst):
@@ -43,6 +55,12 @@ def calc_bank_errors(bank_row_dict, bank):
 
 lines = ll.parse_run_directory(sys.argv[1], sys.argv[2])
 
+
+### DDR4 Parameter, set according too need.
+if((len(sys.argv)>3) and (sys.argv[3]=="DDR4")):
+	DDR4 =True
+else:
+	DDR4 = False
 
 
 #######################################################################################################################################################################################
@@ -78,6 +96,12 @@ for line in lines:
 			line.bank_row_dict_max_banks[bank_errors_scaled_sorted[0][0]] = line.bank_row_dict[bank_errors_scaled_sorted[0][0]]
 		if len(bank_errors_scaled_sorted)>1:
 			line.bank_row_dict_max_banks[bank_errors_scaled_sorted[1][0]] = line.bank_row_dict[bank_errors_scaled_sorted[1][0]]	
+		if DDR4:
+			if len(bank_errors_scaled_sorted)>2:						
+				line.bank_row_dict_max_banks[bank_errors_scaled_sorted[2][0]] = line.bank_row_dict[bank_errors_scaled_sorted[2][0]]
+			if len(bank_errors_scaled_sorted)>3:	
+				line.bank_row_dict_max_banks[bank_errors_scaled_sorted[3][0]] = line.bank_row_dict[bank_errors_scaled_sorted[3][0]]	
+			
 	else:
 		if len(bank_errors_scaled_sorted)>0:	
 			line.bank_row_dict_max_banks[bank_errors_scaled_sorted[0][0]] = line.bank_row_dict[bank_errors_scaled_sorted[0][0]]
@@ -90,7 +114,7 @@ for line in lines:
 
 
 
-
+lines = sorted(lines, key=lambda line: line.name)
 
 for line in lines:
 	if(line.coor == "X") or (line.coor == "Y"):
@@ -99,6 +123,7 @@ for line in lines:
 			print(bank, calc_bank_errors(line.bank_row_dict_max_banks, bank))
 
 
+	
 
 
 
@@ -121,11 +146,13 @@ for bank in banks:
 
 ## Plot the banks
 banks_list =  list(banks2.keys())
-marker_colors = ['blue', 'orange', 'green', 'red', 'purple', 'black', 'pink', 'gray']
+
 
 
 print(banks_list)
 scatter_plot =[]
+
+
 for bank in banks2:
 	bank_id = banks_list.index(bank)
 	X =[]
@@ -134,33 +161,33 @@ for bank in banks2:
 	for point in banks2[bank]:
 		X.append(point[0])
 		Y.append(point[1])
-	bank_color = marker_colors[bank_id]
+	
 
 	print(X)
 	print(Y)
 	print(bank_colors)
 	print(bank_id)
-	
-	scatter_plot.append(plt.scatter(X, Y, color=bank_color, s=30,   label=str(bank), edgecolor = "black", alpha=1)	)	
+	scatter_plot.append(plt.scatter(X, Y, color='black', s=0, marker="o" )	)
+	for x,y in zip(X, Y):
+		plt.text(x,y, str(bank), color="red", fontsize=6)	
 plt.title("Spatial Mapping of Banks")
 plt.xlim(0,110)
-plt.ylim(0,80)
-legend1 = plt.legend(scatter_plot, banks2.keys(), loc="upper left")
-plt.gca().add_artist(legend1)  # Add the color-based legend to the plot without removing the scatter plot legend
+plt.ylim(0,110)
+#legend1 = plt.legend(scatter_plot, banks2.keys(), loc="upper left")
+#plt.gca().add_artist(legend1)  # Add the color-based legend to the plot without removing the scatter plot legend
 
 plt.show()
 plt.close()
 
 
 
-bank_overlap = np.zeros((80, 100))
+bank_overlap = np.zeros((110, 110))
 for bank in banks2:
-	bank_id = banks_list.index(bank)
 	for coor in banks2[bank]:
-		bank_overlap[coor[1]][coor[0]] +=0.125
+		bank_overlap[coor[0]][coor[1]] +=0.0625
 
 
-plt.imshow(bank_overlap, cmap='Greys', interpolation='nearest', alpha=0.125)
+plt.imshow(bank_overlap, cmap='Greys', interpolation='nearest', alpha=0.2)
 plt.title('Bank Overlap')
 plt.xlabel('X-axis')
 plt.ylabel('Y-axis')
@@ -498,7 +525,11 @@ X_max = []
 Y_min = []
 Y_max = []
 xt = 2
-fig, axes = plt.subplots(2, 4, figsize=(20, 6))  # 2 rows, 1 column
+if DDR4:
+	fig, axes = plt.subplots(4, 4, figsize=(20, 6))  # 2 rows, 1 column
+else:
+	fig, axes = plt.subplots(2, 4, figsize=(20, 6)) 	
+
 for bank1 in banks_list:
 	for line in lines:
 		if line.coor == "X":
@@ -535,7 +566,11 @@ X_max = []
 Y_min = []
 Y_max = []
 xt = 2
-fig, axes = plt.subplots(2, 4, figsize=(20, 6))  # 2 rows, 1 column
+if DDR4:
+	fig, axes = plt.subplots(4, 4, figsize=(20, 6))
+else:
+	fig, axes = plt.subplots(2, 4, figsize=(20, 6))
+
 for bank1 in banks_list:
 	for line in lines:
 		if(line.coor =="Y"):

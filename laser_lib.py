@@ -14,6 +14,7 @@ class line_cls:
 	def __init__(self):
 		self.coor = 'X'
 		self.value = 0
+		self.name= ""
 		self.rotation = 0.0
 		self.length = 0.0
 		self.width = 0.0
@@ -137,10 +138,13 @@ def parse_run_directory(directory, chip_offset):
 	for pathl in file_paths:
 		filename  = pathl.split("/")[-1]
 		filename_wo_ext = filename[:-5]
-		coor, val = filename_wo_ext.split("_")
+		arr = filename_wo_ext.split("_")
+		coor = arr[0]
+		val = arr[1]
 		line = line_cls()
 		line.coor = coor
 		line.value = int(float(val)*10)
+		line.name =  line.coor+"="+str(line.value)
 		line.error_bit_offset = (int(chip_offset)-1) *8
 		
 		table  = parse_file(pathl)
