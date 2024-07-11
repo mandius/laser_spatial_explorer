@@ -130,7 +130,7 @@ bank_error_data = []
 
 for line in lines:
     row_base = [f"{line.coor} = {line.value}"]
-    total_error = sum(calc_bank_errors(bank) for bank in line.bank_row_dict)
+    total_error = sum(calc_bank_errors(line.bank_row_dict, bank) for bank in line.bank_row_dict)
     for bank in line.bank_row_dict:
         error = calc_bank_errors(line.bank_row_dict,bank)
         data.append(row_base + [total_error, bank, error])
