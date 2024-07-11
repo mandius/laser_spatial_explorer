@@ -92,8 +92,9 @@ def get_bit(val, bit):
 
 
 def calc_mappings(addr):
-    bank = (get_bit(addr, 13)^get_bit(addr,17)) | ((get_bit(addr, 14)^get_bit(addr,18))<<1) | ((get_bit(addr, 15)^get_bit(addr,19))<<2) |  ((get_bit(addr, 16)^get_bit(addr,20))<<3)   
-
+    #DDR3 mapping function
+    #bank = (get_bit(addr, 13)^get_bit(addr,17)) | ((get_bit(addr, 14)^get_bit(addr,18))<<1) | ((get_bit(addr, 15)^get_bit(addr,19))<<2) |  ((get_bit(addr, 16)^get_bit(addr,20))<<3)
+    bank = (get_bit(addr, 6)^get_bit(addr,13)) | ((get_bit(addr, 14)^get_bit(addr,17))<<1) | ((get_bit(addr, 15)^get_bit(addr,18))<<2) |  ((get_bit(addr, 16)^get_bit(addr,19))<<3)
     row = (addr&0x1fffe0000)>>17
     col = (addr&0x1fff)>>3
     return [bank, row, col]
