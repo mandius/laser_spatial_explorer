@@ -123,9 +123,32 @@ for line in lines:
 			print(bank, calc_bank_errors(line.bank_row_dict_max_banks, bank))
 
 
-	
+##################################################Brian Test Code##############################################
 
+data = []
+bank_error_data = []
 
+for line in lines:
+    row_base = [f"{line.coor} = {line.value}"]
+    total_error = sum(calc_bank_errors(bank) for bank in line.bank_row_dict)
+    for bank in line.bank_row_dict:
+        error = calc_bank_errors(line.bank_row_dict,bank)
+        data.append(row_base + [total_error, bank, error])
+
+        if bank not in bank_error_data:
+                    bank_error_data[bank] = error
+        else:
+                    bank_error_data[bank] += error
+
+# Create DataFrame
+df = pd.DataFrame(data, columns=['Coordinate=Value', 'Total Error', 'Bank', 'Error'])
+
+# Save DataFrame to Excel
+df.to_excel('output_per_line.xlsx', index=False)
+
+df_bank = pd.DataFrame(bank_error_data, columns=['Error per bank'])
+df_bank.to_excel('output_per_bank.xlsx', index_label='Index')
+##################################################Brian Test Code##############################################
 
 #### Do X,Y Correlation on this bank data to plot spatially.
 banks = {}
